@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentification 2FA par OTP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            margin-bottom: 40px;
+        }
+        h2 {
+            color: #333;
+        }
+        input[type="text"], input[type="password"], input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .admin, .user {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container admin">
+        <h2>Interface Administrateur</h2>
+        <form id="adminForm">
+            <label for="adminPassword">Mot de passe administrateur :</label>
+            <input type="password" id="adminPassword" required>
+            
+            <label for="userName">Nom de l'utilisateur :</label>
+            <input type="text" id="userName" required>
+            
+            <label for="userEmail">Email de l'utilisateur :</label>
+            <input type="text" id="userEmail" required>
+            
+            <input type="submit" value="Ajouter Utilisateur">
+        </form>
+    </div>
+
+    <div class="container user">
+        <h2>Interface Utilisateur</h2>
+        <form id="userForm">
+            <label for="otp">Entrez votre OTP :</label>
+            <input type="text" id="otp" required>
+            <input type="submit" value="Accéder au serveur">
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('adminForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            // Logique pour ajouter l'utilisateur et envoyer l'OTP
+            const adminPassword = document.getElementById('adminPassword').value;
+            const userName = document.getElementById('userName').value;
+            const userEmail = document.getElementById('userEmail').value;
+
+            // Ici, vous ajouteriez la logique pour valider le mot de passe admin et ajouter l'utilisateur
+            console.log(`Admin Password: ${adminPassword}, New User: ${userName}, Email: ${userEmail}`);
+            alert('Utilisateur ajouté avec succès et OTP envoyé !');
+        });
+
+        document.getElementById('userForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            // Logique pour vérifier l'OTP
+            const otp = document.getElementById('otp').value;
+
+            // Ici, vous ajouteriez la logique pour vérifier l'OTP
+            console.log(`OTP entré: ${otp}`);
+            alert('Accès accordé !');
+        });
+    </script>
+
+</body>
+</html>
