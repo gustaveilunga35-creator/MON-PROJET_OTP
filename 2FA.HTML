@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <base target="_self">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation 2FA OTP - Admin & Utilisateurs</title>
+    <meta name="description" content="Système de simulation d'authentification à deux facteurs par OTP avec interface administrateur et utilisateur.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #a5b4fc;
+            --accent: #06b6d4;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: radial-gradient(ellipse at 10% 20%, rgba(99,102,241,0.08) 0%, transparent 50%),
+                              radial-gradient(ellipse at 90% 80%, rgba(6,182,212,0.06) 0%, transparent 50%);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .glass-input {
+            background: rgba(51, 65, 85, 0.6);
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: all 0.3s;
+        }
+        .glass-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+            outline: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            transition: all 0.3s;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99,102,241,0.35); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-accent {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+            transition: all 0.3s;
+        }
+        .btn-accent:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(6,182,212,0.35); }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            transition: all 0.3s;
+        }
+        .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(239,68,68,0.35); }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            transition: all 0.3s;
+        }
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(16,185,129,0.35); }
+        .otp-digit {
+            width: 52px; height: 60px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: rgba(51, 65, 85, 0.6);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: #fff;
+            transition: all 0.3s;
+        }
+        .otp-digit:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.25);
+            outline: none;
+        }
+        .server-card {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.4s;
+            cursor: pointer;
+        }
+        .server-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--primary);
+            box-shadow: 0 12px 40px rgba(99,102,241,0.15);
+        }
+        .server-card.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            filter: grayscale(0.8);
+        }
+        .server-card.disabled:hover {
+            transform: none;
+            box-shadow: none;
+            border-color: rgba(255,255,255,0.06);
+        }
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .pulse-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            display: inline-block;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.3); }
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            padding: 16px 24px;
+            border-radius: 12px;
+            background: var(--bg-card);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.15);
+            max-width: 400px;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast.success { border-left: 4px solid var(--success); }
+        .toast.error { border-left: 4px solid var(--danger); }
+        .toast.warning { border-left: 4px solid var(--warning); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--bg-input); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+        .tab-active {
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary-light);
+        }
+        .user-row {
+            transition: all 0.3s;
+        }
+        .user-row:hover {
+            background: rgba(99,102,241,0.08);
+        }
+        @media (max-width: 640px) {
+            .otp-digit { width: 42px; height: 52px; font-size: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast notification -->
+    <div id="toast" class="toast flex items-center gap-3">
+        <i id="toastIcon" class="fas fa-check-circle text-lg"></i>
+        <span id="toastMessage" class="text-sm font-medium"></span></div>
+
+    <!-- Main App Container -->
+<div id="app" class="min-h-screen flex flex-col">
+        <!-- ======== LANDING VIEW ======== -->
+        <div id="view-landing" class="flex-1 flex flex-col">
+            <header class="py-6 px-4 sm:px-8">
+                <div class="max-w-6xl mx-auto flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                            <i class="fas fa-shield-halved text-white text-lg"></i>
+                        </div>
+                        <span class="text-xl font-bold tracking-tight">Secure<span class="text-indigo-400">2FA</span></span>
+                    </div>
+                    <div class="text-xs text-slate-500 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700/50">
+                        <i class="fas fa-circle text-emerald-400 text-[6px] mr-1.5"></i> Simulation OTP
+                    </div>
+                </div>
+            </header>
+            <main class="flex-1 flex items-center justify-center px-4 py-8">
+                <div class="max-w-4xl w-full fade-in">
+                    <div class="text-center mb-10">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 mb-5">
+                            <i class="fas fa-key text-3xl text-indigo-400"></i>
+                        </div>
+                        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-3">
+                            Authentification <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">2FA par OTP</span>
+                        </h1>
+                        <p class="text-slate-400 text-base sm:text-lg max-w-xl mx-auto">
+                     
+             Gérez les accès administrateur et utilisateur avec génération d'OTP.
+                        </p>
+                    </div>
+                    <div class="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                        <button id="btn-admin-landing" class="glass-card rounded-2xl p-8 text-center group cursor-pointer hover:border-indigo-500/40 transition-all duration-300 border border-transparent">
+                            <div class="w-14 h-14 rounded-xl bg-indigo-500/20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                                <i class="fas fa-user-shield text-2xl text-indigo-400"></i>
+                            </div>
+                            <h2 class="text-xl font-bold mb-2">Interface Admin</h2>
+                            <p class="text-sm text-slate-400 mb-4">Gérer les utilisateurs, attribuer les accès et générer les OTP</p>
+                            <span class="inline-block text-xs font-semibold text-indigo-300 bg-indigo-500/10 px-4 py-1.5 rounded-full border border-indigo-500/20">
+                                <i class="fas fa-lock-open mr-1"></i> Accès sécurisé
+                            </span>
+                        </button>
+                        <button id="btn-user-landing" class="glass-card rounded-2xl p-8 text-center group cursor-pointer hover:border-cyan-500/40 transition-all duration-300 border border-transparent">
+                            <div class="w-14 h-14 rounded-xl bg-cyan-500/20 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                                <i class="fas fa-user text-2xl text-cyan-400"></i>
+                            </div>
+                            <h2 class="text-xl font-bold mb-2">Interface Utilisateur</h2>
+                            <p class="text-sm text-slate-400 mb-4">Se connecter avec son OTP et accéder aux serveurs distants</p>
+                            <span class="inline-block text-xs font-semibold text-cyan-300 bg-cyan-500/10 px-4 py-1.5 rounded-full border border-cyan-500/20">
+                                <i class="fas fa-arrow-right mr-1"></i> Accéder aux serveurs
+                            </span>
+                        </button>
+                    </div>
+                    <div class="mt-10 text-center">
+                        <div class="inline-flex items-center gap-6 text-xs text-slate-500 bg-slate-800/30 px-6 py-3 rounded-full border border-slate-700/30">
+                            <span><i class="fas fa-check-circle text-emerald-400 mr-1"></i> Admin•admin@2004</span>
+                            <span><i class="fas fa-clock text-amber-400 mr-1"></i> OTP à usage unique</span>
+                            <span><i class="fas fa-server text-blue-400 mr-1"></i> 3 serveurs distants</span>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <footer class="py-4 text-center text-xs text-slate-600 border-t border-slate-800/50">
+                 Authentification 2FA par OTP — Tous les accès sont simulés
+            </footer>
+        </div>
+
+        <!-- ======== ADMIN LOGIN VIEW ======== -->
+        <div id="view-admin-login" class="flex-1 flex flex-col hidden">
+            <header class="py-6 px-4 sm:px-8">
+                <div class="max-w-6xl mx-auto flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <button id="btn-back-from-admin-login" class="w-9 h-9 rounded-lg bg-slate-800/60 flex items-center justify-center hover:bg-slate-700/60 transition-all">
+                            <i class="fas fa-arrow-left text-slate-400"></i>
+                        </button>
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                            <i class="fas fa-user-shield text-white text-sm"></i>
+                        </div>
+                        <span class="text-lg font-bold">Administrateur</span>
+                    </div>
+                    <div class="text-xs text-slate-500">Connexion requise</div>
+                </div>
+            </header>
+            <main class="flex-1 flex items-center justify-center px-4 py-8">
+                <div class="w-full max-w-md fade-in">
+                    <div class="glass-card rounded-2xl p-6 sm:p-8">
+                        <div class="text-center mb-6">
+                            <div class="w-14 h-14 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4 border-2 border-indigo-500/30">
+                                <i class="fas fa-lock text-2xl text-indigo-400"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold">Accès Admin</h2>
+                            <p class="text-sm text-slate-400 mt-1">Entrez votre mot de passe pour continuer</p>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-xs text-slate-400 font-medium mb-1.5 block">Mot de passe administrateur</label>
+                                <div class="relative">
+                                    <input id="admin-password-input" type="password" placeholder="Entrez votre mot de passe" class="glass-input w-full px-4 py-3.5 rounded-xl text-sm text-white placeholder-slate-500 pr-12">
+                                    <button id="toggle-password-visibility" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+                                        <i class="far fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button id="btn-admin-login-submit" class="btn-primary w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2">
+                                <i class="fas fa-arrow-right-to-bracket"></i>
+                                Se connecter
+                            </button>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-700/50">
+                            <p class="text-xs text-slate-500 text-center">
+                                <i class="fas fa-info-circle mr-1"></i> Mot de passe par défaut : <code class="text-indigo-300 bg-slate-800 px-2 py-0.5 rounded text-xs">admin@2004</code>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- ======== ADMIN DASHBOARD VIEW ======== -->
+        <div id="view-admin-dashboard" class="flex-1 flex flex-col hidden">
+            <header class="py-4 px-4 sm:px-8 border-b border-slate-800/50">
+                <div class="max-w-6xl mx-auto flex items-center justify-between flex-wrap gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                            <i class="fas fa-user-shield text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <span class="text-lg font-bold">Dashboard Admin</span>
+                            <div class="text-xs text-slate-500"><i class="fas fa-circle text-emerald-400 text-[6px] mr-1"></i> Connecté</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span id="admin-user-count" class="text-xs bg-slate-800 px-3 py-1.5 rounded-full text-slate-400 border border-slate-700/50">
+                            <i class="fas fa-users mr-1"></i> <span id="user-count-display">0</span> utilisateurs
+                        </span>
+                        <button id="btn-admin-logout" class="text-xs bg-slate-800/60 hover:bg-slate-700/60 text-slate-400 px-3 py-1.5 rounded-full border border-slate-700/50 transition-all flex items-center gap-1.5">
+                            <i class="fas fa-power-off"></i> Déconnexion
+                        </button>
+                    </div>
+                </div>
+            </header>
+            <main class="flex-1 overflow-y-auto px-4 sm:px-8 py-6">
+                <div class="max-w-6xl mx-auto">
+                    <!-- Stats -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                        <div class="glass-card rounded-xl p-4 text-center">
+                            <div class="text-2xl font-bold text-indigo-400" id="stat-total">0</div>
+                            <div class="text-xs text-slate-500 mt-1">Total utilisateurs</div>
+                        </div>
+                        <div class="glass-card rounded-xl p-4 text-center">
+                            <div class="text-2xl font-bold text-emerald-400" id="stat-active">0</div>
+                            <div class="text-xs text-slate-500 mt-1">OTP actifs</div>
+                        </div>
+                        <div class="glass-card rounded-xl p-4 text-center">
+                            <div class="text-2xl font-bold text-amber-400" id="stat-pending">0</div>
+                            <div class="text-xs text-slate-500 mt-1">En attente</div>
+                        </div>
+                        <div class="glass-card rounded-xl p-4 text-center">
+                            <div class="text-2xl font-bold text-cyan-400" id="stat-used">0</div>
+                            <div class="text-xs text-slate-500 mt-1">Accès accordés</div>
+                        </div>
+                    </div>
+
+                    <!-- Add User Form -->
+                    <div class="glass-card rounded-2xl p-5 sm:p-6 mb-8">
+                        <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <i class="fas fa-user-plus text-indigo-400"></i> Ajouter un utilisateur
+                        </h3>
+                        <form id="add-user-form" class="grid sm:grid-cols-3 gap-4" onsubmit="return false;">
+                            <div>
+                                <label class="text-xs text-slate-400 font-medium mb-1 block">Nom complet</label>
+                                <input id="input-user-name" type="text" placeholder="Jean Dupont" class="glass-input w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-500" required>
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 font-medium mb-1 block">Email / Identifiant</label>
+                                <input id="input-user-email" type="email" placeholder="jean@exemple.com" class="glass-input w-full px-4 py-3 rounded-xl text-sm text-white placeholder-slate-500" required>
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="btn-primary w-full py-3 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2">
+                                    <i class="fas fa-plus"></i> Ajouter & générer OTP
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Users Table -->
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <div class="px-5 sm:px-6 py-4 border-b border-slate-700/50 flex items-center justify-between">
+                            <h3 class="font-bold flex items-center gap-2">
+                                <i class="fas fa-list text-slate-400"></i> Liste des utilisateurs
+                            </h3>
+                            <span class="text-xs text-slate-500">Cliquez sur un OTP pour le copier</span>
+                        </div>
+                        <div id="users-table-container" class="overflow-x-auto">
+                            <!-- Rendered by JS -->
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- ======== USER PORTAL VIEW ======== -->
+        <div id="view-user-portal" class="flex-1 flex flex-col hidden">
+            <header class="py-6 px-4 sm:px-8">
+                <div class="max-w-6xl mx-auto flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <button id="btn-back-from-user" class="w-9 h-9 rounded-lg bg-slate-800/60 flex items-center justify-center hover:bg-slate-700/60 transition-all">
+                            <i class="fas fa-arrow-left text-slate-400"></i>
+                        </button>
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg">
+                            <i class="fas fa-user text-white text-sm"></i>
+                        </div>
+                        <span class="text-lg font-bold">Portail Utilisateur</span>
+                    </div>
+                    <div id="user-portal-status" class="text-xs text-slate-500">Authentification requise</div>
+                </div>
+            </header>
+            <main class="flex-1 flex items-center justify-center px-4 py-8">
+                <div class="w-full max-w-lg fade-in" id="user-step-container">
+                    <!-- Step 1: Identify -->
+                    <div id="user-step-1" class="glass-card rounded-2xl p-6 sm:p-8">
+                        <div class="text-center mb-6">
+                            <div class="w-14 h-14 rounded-full bg-cyan-500/20 flex items-center justify-center mx-auto mb-4 border-2 border-cyan-500/30">
+                                <i class="fas fa-id-card text-2xl text-cyan-400"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold">Identification</h2>
+                            <p class="text-sm text-slate-400 mt-1">Entrez votre email pour recevoir votre OTP</p>
+                        </div>
+                        <form id="user-identify-form" class="space-y-4" onsubmit="return false;">
+                            <div>
+                                <label class="text-xs text-slate-400 font-medium mb-1.5 block">Votre email / identifiant</label>
+                                <input id="input-user-identify" type="email" placeholder="vous@exemple.com" class="glass-input w-full px-4 py-3.5 rounded-xl text-sm text-white placeholder-slate-500">
+                            </div>
+                            <button type="submit" class="btn-accent w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2">
+                                <i class="fas fa-paper-plane"></i> Recevoir mon OTP
+                            </button>
+                        </form>
+                        <div class="mt-4 pt-4 border-t border-slate-700/50">
+                            <p class="text-xs text-slate-500 text-center">
+                                <i class="fas fa-info-circle mr-1"></i> Vous devez avoir été ajouté par l'administrateur
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: OTP Input -->
+                    <div id="user-step-2" class="glass-card rounded-2xl p-6 sm:p-8 hidden">
+                        <div class="text-center mb-6">
+                            <div class="w-14 h-14 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-4 border-2 border-amber-500/30">
+                                <i class="fas fa-shield-alt text-2xl text-amber-400"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold">Vérification OTP</h2>
+                            <p class="text-sm text-slate-400 mt-1">Un code à 6 chiffres vous a été envoyé</p>
+                            <div id="user-otp-display" class="mt-3 inline-block bg-slate-800/80 px-5 py-2 rounded-xl border border-slate-700/50">
+                                <span class="text-xs text-slate-400">Votre OTP : </span>
+                                <span id="user-current-otp" class="text-lg font-mono font-bold text-amber-400 tracking-widest">------</span>
+                                <button id="btn-copy-otp" class="ml-2 text-slate-500 hover:text-slate-300 transition-colors" title="Copier l'OTP">
+                                    <i class="far fa-copy text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <form id="user-otp-form" class="space-y-4" onsubmit="return false;">
+                            <div>
+                                <label class="text-xs text-slate-400 font-medium mb-2 block text-center">Entrez le code OTP à 6 chiffres</label>
+                                <div class="flex items-center justify-center gap-2 sm:gap-3">
+                                    <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autofocus data-index="0">
+                                    <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="1">
+                                    <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="2">
+                                    <span class="text-slate-600 text-xl font-bold">-</span>
+                                    <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="3">
+                                    <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="4">
+                                    <input class="otp-digit" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" data-index="5">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-accent w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2">
+                                <i class="fas fa-check-circle"></i> Vérifier & accéder aux serveurs
+                            </button>
+                            <button id="btn-resend-otp" type="button" class="w-full text-xs text-slate-500 hover:text-slate-300 transition-colors py-2">
+                                <i class="fas fa-rotate mr-1"></i> Renvoyer un nouveau code
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Step 3: Server Access -->
+                    <div id="user-step-3" class="hidden fade-in">
+                        <div class="text-center mb-6">
+                            <div class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-4 py-1.5 text-xs text-emerald-400 mb-4">
+                                <i class="fas fa-check-circle"></i> Authentifié avec succès
+                            </div>
+                            <h2 class="text-2xl sm:text-3xl font-bold">Accès aux serveurs distants</h2>
+                            <p class="text-sm text-slate-400 mt-1">Sélectionnez un serveur auquel vous souhaitez vous connecter</p>
+                        </div>
+                        <div id="servers-grid" class="grid sm:grid-cols-3 gap-4">
+                            <!-- Rendered by JS -->
+                        </div>
+                        <div class="mt-6 text-center">
+                            <button id="btn-user-disconnect" class="text-xs text-slate-500 hover:text-slate-300 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700/50 transition-all">
+                                <i class="fas fa-power-off mr-1"></i> Se déconnecter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- ======== SERVER MODAL ======== -->
+        <div id="server-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+            <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="modal-backdrop"></div>
+            <div class="relative glass-card rounded-2xl p-6 sm:p-8 max-w-md w-full fade-in">
+                <button id="modal-close" class="absolute top-4 right-4 w-8 h-8 rounded-lg bg-slate-800/80 flex items-center justify-center hover:bg-slate-700/80 transition-all">
+                    <i class="fas fa-times text-slate-400 text-sm"></i>
+                </button>
+                <div class="text-center mb-5">
+                    <div id="modal-icon" class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-xl">
+                        <i id="modal-icon-img" class="fas fa-server text-3xl text-white"></i>
+                    </div>
+                    <h3 id="modal-title" class="text-xl font-bold">Connexion au serveur</h3>
+                    <p id="modal-desc" class="text-sm text-slate-400 mt-1">Accès distant sécurisé établi</p>
+                </div>
+                <div id="modal-status" class="bg-slate-800/50 rounded-xl p-4 mb-4 text-center">
+                    <div class="flex items-center justify-center gap-2 text-emerald-400">
+                        <span class="pulse-dot"></span>
+                        <span class="text-sm font-medium">Connexion sécurisée établie</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Session chiffrée de bout en bout • IP masquée</p>
+                </div>
+                <button id="modal-action-btn" class="w-full py-3 rounded-xl text-white font-semibold text-sm bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-plug"></i> Accéder au tableau de bord
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===================================================================
+        // DATA LAYER
+        // ===================================================================
+        const ADMIN_PASSWORD = 'admin@2004';
+
+        // Load from localStorage or initialize
+        let users = [];
+        try {
+            const stored = localStorage.getItem('2fa_users');
+            if (stored) users = JSON.parse(stored);
+        } catch(e) { users = []; }
+
+        function saveUsers() {
+            localStorage.setItem('2fa_users', JSON.stringify(users));
+        }
+
+        function generateOTP() {
+            return String(Math.floor(100000 + Math.random() * 900000));
+        }
+
+        // ===================================================================
+        // STATE
+        // ===================================================================
+        let currentView = 'landing';
+        let currentUserEmail = null;
+        let currentUserOtp = null;
+
+        // ===================================================================
+        // VIEW MANAGEMENT
+        // ===================================================================
+        const views = {
+            landing: document.getElementById('view-landing'),
+            adminLogin: document.getElementById('view-admin-login'),
+            adminDashboard: document.getElementById('view-admin-dashboard'),
+            userPortal: document.getElementById('view-user-portal'),
+        };
+
+        function showView(viewName) {
+            Object.keys(views).forEach(key => {
+                views[key].classList.toggle('hidden', key !== viewName);
+            });
+            currentView = viewName;
+            // Reset scroll on main
+            document.querySelector('#app > div:not(.hidden) main')?.scrollTo?.(0,0);
+        }
+
+        // ===================================================================
+        // TOAST
+        // ===================================================================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const msg = document.getElementById('toastMessage');
+            toast.className = 'toast flex items-center gap-3 show ' + type;
+            const icons = {
+                success: 'fas fa-check-circle text-emerald-400',
+                error: 'fas fa-times-circle text-red-400',
+                warning: 'fas fa-exclamation-circle text-amber-400'
+            };
+            icon.className = icons[type] || icons.success;
+            msg.textContent = message;
+            clearTimeout(toast._timeout);
+            toast._timeout = setTimeout(() => { toast.classList.remove('show'); }, 3500);
+        }
+
+        // ===================================================================
+        // RENDER FUNCTIONS
+        // ===================================================================
+        function renderUsersTable(usersList) {
+            if (!usersList || usersList.length === 0) {
+                return `<div class="p-8 text-center text-slate-500">
+                    <i class="fas fa-users-slash text-3xl mb-3 opacity-40"></i>
+                    <p class="text-sm">Aucun utilisateur enregistré. Ajoutez-en un !</p>
+                </div>`;
+            }
+            const rows = usersList.map((u, idx) => {
+                const statusColor = u.otpUsed ? 'text-slate-500' : 'text-emerald-400';
+                const statusText = u.otpUsed ? 'OTP utilisé' : 'OTP actif';
+                const statusIcon = u.otpUsed ? 'fas fa-check-circle' : 'fas fa-clock';
+                const otpDisplay = u.otp || '---';
+                return `<tr class="user-row border-b border-slate-700/30">
+                    <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 flex items-center justify-center text-xs font-bold text-indigo-300 border border-indigo-500/20">
+                                ${u.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium">${u.name}</div>
+                                <div class="text-xs text-slate-500">${u.email}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap">
+                        <span class="text-xs font-mono bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/50 cursor-pointer hover:border-indigo-500/40 transition-all" onclick="copyOTP('${u.otp || ''}')" title="Cliquer pour copier">
+                            ${otpDisplay}
+                        </span>
+                    </td>
+                    <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap">
+                        <span class="inline-flex items-center gap-1.5 text-xs ${statusColor}">
+                            <i class="${statusIcon} text-[10px]"></i> ${statusText}
+                        </span>
+                    </td>
+                    <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right">
+                        <button class="text-xs text-slate-500 hover:text-red-400 transition-all px-2 py-1 rounded hover:bg-red-500/10" onclick="deleteUser('${u.email}')" title="Supprimer">
+                            <i class="fas fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+            return `<table class="w-full text-sm">
+                <thead>
+                    <tr class="text-xs text-slate-500 uppercase tracking-wider border-b border-slate-700/50">
+                        <th class="text-left px-4 sm:px-6 py-3 font-medium">Utilisateur</th>
+                        <th class="text-left px-4 sm:px-6 py-3 font-medium">OTP</th>
+                        <th class="text-left px-4 sm:px-6 py-3 font-medium">Statut</th>
+                        <th class="text-right px-4 sm:px-6 py-3 font-medium">Action</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+        }
+
+        function renderServerCards() {
+            const servers = [
+                {
+                    name: 'Proton Mail',
+                    icon: 'fas fa-envelope',
+                    desc: 'Email sécurisé chiffré de bout en bout',
+                    color: 'from-purple-500 to-blue-600',
+                    bg: 'bg-purple-500/10',
+                    border: 'border-purple-500/20',
+                    textColor: 'text-purple-400'
+                },
+                {
+                    name: 'Gmail',
+                    icon: 'fab fa-google',
+                    desc: 'Service de messagerie Google Workspace',
+                    color: 'from-red-500 to-yellow-500',
+                    bg: 'bg-red-500/10',
+                    border: 'border-red-500/20',
+                    textColor: 'text-red-400'
+                },
+                {
+                    name: 'Serveur distant',
+                    icon: 'fas fa-server',
+                    desc: 'Accès SSH au serveur de production',
+                    color: 'from-cyan-500 to-teal-600',
+                    bg: 'bg-cyan-500/10',
+                    border: 'border-cyan-500/20',
+                    textColor: 'text-cyan-400'
+                }
+            ];
+            return servers.map((s, i) => `
+                <div class="server-card group cursor-pointer" data-server-index="${i}" role="button" tabindex="0" aria-label="Accéder à ${s.name}">
+                    <div class="w-12 h-12 rounded-xl ${s.bg} border ${s.border} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
+                        <i class="${s.icon} text-xl ${s.textColor}"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-1">${s.name}</h3>
+                    <p class="text-xs text-slate-400">${s.desc}</p>
+                    <div class="mt-3 flex items-center gap-1.5 text-xs text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <i class="fas fa-arrow-right"></i> <span>Se connecter</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ===================================================================
+        // MOUNT FUNCTIONS
+        // ===================================================================
+        function mountAdminDashboard() {
+            const container = document.getElementById('users-table-container');
+            container.innerHTML = renderUsersTable(users);
+            // Update stats
+            document.getElementById('stat-total').textContent = users.length;
+            document.getElementById('stat-active').textContent = users.filter(u => !u.otpUsed && u.otp).length;
+            document.getElementById('stat-pending').textContent = users.filter(u => !u.otp).length;
+            document.getElementById('stat-used').textContent = users.filter(u => u.otpUsed).length;
+            document.getElementById('user-count-display').textContent = users.length;
+        }
+
+        function mountServerGrid() {
+            document.getElementById('servers-grid').innerHTML = renderServerCards();
+        }
+
+        // ===================================================================
+        // HELPER FUNCTIONS (exposed globally for onclick)
+        // ===================================================================
+        window.copyOTP = function(otp) {
+            if (!otp || otp === '---') {
+                showToast('Aucun OTP à copier', 'warning');
+                return;
+            }
+            navigator.clipboard.writeText(otp).then(() => {
+                showToast('OTP copié dans le presse-papier', 'success');
+            }).catch(() => {
+                // Fallback
+                const ta = document.createElement('textarea');
+                ta.value = otp;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                showToast('OTP copié', 'success');
+            });
+        };
+
+        window.deleteUser = function(email) {
+            const idx = users.findIndex(u => u.email === email);
+            if (idx === -1) return;
+            const name = users[idx].name;
+            users.splice(idx, 1);
+            saveUsers();
+            mountAdminDashboard();
+            showToast(`Utilisateur "${name}" supprimé`, 'success');
+        };
+
+        // ===================================================================
+        // EVENT DELEGATION (Main handler)
+        // ===================================================================
+        document.addEventListener('click', function(e) {
+            const target = e.target.closest('[data-server-index]');
+            if (target) {
+                e.preventDefault();
+                const idx = parseInt(target.dataset.serverIndex);
+                openServerModal(idx);
+                return;
+            }
+
+            // Modal backdrop
+            if (e.target.id === 'modal-backdrop' || e.target.closest('#modal-close')) {
+                document.getElementById('server-modal').classList.add('hidden');
+                return;
+            }
+        });
+
+        // ===================================================================
+        // MODAL LOGIC
+        // ===================================================================
+        const serverData = [
+            { name: 'Proton Mail', icon: 'fas fa-envelope', desc: 'Messagerie chiffrée Proton', color: 'from-purple-500 to-blue-600', imgClass: 'fas fa-envelope text-3xl text-white' },
+            { name: 'Gmail', icon: 'fab fa-google', desc: 'Service Gmail Google', color: 'from-red-500 to-yellow-500', imgClass: 'fab fa-google text-3xl text-white' },
+            { name: 'Serveur distant', icon: 'fas fa-server', desc: 'Accès SSH au serveur', color: 'from-cyan-500 to-teal-600', imgClass: 'fas fa-server text-3xl text-white' }
+        ];
+
+        function openServerModal(index) {
+            const s = serverData[index];
+            if (!s) return;
+            document.getElementById('modal-title').textContent = s.name;
+            document.getElementById('modal-desc').textContent = s.desc;
+            document.getElementById('modal-icon').className = `w-16 h-16 rounded-2xl bg-gradient-to-br ${s.color} flex items-center justify-center mx-auto mb-4 shadow-xl`;
+            document.getElementById('modal-icon-img').className = s.imgClass;
+            document.getElementById('modal-status').innerHTML = `
+                <div class="flex items-center justify-center gap-2 text-emerald-400">
+                    <span class="pulse-dot"></span>
+                    <span class="text-sm font-medium">Connexion sécurisée établie</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-2">Session chiffrée de bout en bout • IP masquée</p>
+            `;
+            document.getElementById('modal-action-btn').innerHTML = `<i class="fas fa-plug"></i> Accéder à ${s.name}`;
+            document.getElementById('server-modal').classList.remove('hidden');
+        }
+
+        // ===================================================================
+        // OTP DIGIT AUTO-FOCUS
+        // ===================================================================
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('otp-digit')) {
+                const idx = parseInt(e.target.dataset.index);
+                e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0,1);
+                if (e.target.value && idx < 5) {
+                    const next = document.querySelector(`.otp-digit[data-index="${idx+1}"]`);
+                    if (next) next.focus();
+                }
+            }
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && e.target.classList.contains('otp-digit')) {
+                const idx = parseInt(e.target.dataset.index);
+                if (!e.target.value && idx > 0) {
+                    const prev = document.querySelector(`.otp-digit[data-index="${idx-1}"]`);
+                    if (prev) { prev.focus(); prev.value = ''; }
+                }
+            }
+        });
+
+        // ===================================================================
+        // SPECIFIC EVENT BINDINGS
+        // ===================================================================
+        // Landing
+        document.getElementById('btn-admin-landing').addEventListener('click', () => {
+            showView('adminLogin');
+            document.getElementById('admin-password-input').value = '';
+            document.getElementById('admin-password-input').focus();
+        });
+        document.getElementById('btn-user-landing').addEventListener('click', () => {
+            showView('userPortal');
+            resetUserFlow();
+        });
+
+        // Back buttons
+        document.getElementById('btn-back-from-admin-login').addEventListener('click', () => showView('landing'));
+        document.getElementById('btn-back-from-user').addEventListener('click', () => showView('landing'));
+
+        // Toggle password visibility
+        document.getElementById('toggle-password-visibility').addEventListener('click', function() {
+            const input = document.getElementById('admin-password-input');
+            const icon = this.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'far fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'far fa-eye';
+            }
+        });
+
+        // Admin login
+        document.getElementById('btn-admin-login-submit').addEventListener('click', function() {
+            const pwd = document.getElementById('admin-password-input').value;
+            if (pwd === ADMIN_PASSWORD) {
+                showToast('Connexion réussie, bienvenue administrateur', 'success');
+                showView('adminDashboard');
+                mountAdminDashboard();
+            } else {
+                showToast('Mot de passe incorrect. Essayez admin@2004', 'error');
+                document.getElementById('admin-password-input').value = '';
+                document.getElementById('admin-password-input').focus();
+            }
+        });
+        // Also submit on Enter
+        document.getElementById('admin-password-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') document.getElementById('btn-admin-login-submit').click();
+        });
+
+        // Admin logout
+        document.getElementById('btn-admin-logout').addEventListener('click', function() {
+            showToast('Déconnexion réussie', 'success');
+            showView('landing');
+        });
+
+        // Add user form
+        document.getElementById('add-user-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('input-user-name').value.trim();
+            const email = document.getElementById('input-user-email').value.trim();
+            if (!name || !email) {
+                showToast('Veuillez remplir tous les champs', 'warning');
+                return;
+            }
+            // Check if email already exists
+            if (users.some(u => u.email === email)) {
+                showToast('Cet email existe déjà', 'error');
+                return;
+            }
+            const otp = generateOTP();
+            users.push({ name, email, otp, otpUsed: false });
+            saveUsers();
+            mountAdminDashboard();
+            showToast(`Utilisateur "${name}" ajouté avec succès. OTP: ${otp}`, 'success');
+            document.getElementById('input-user-name').value = '';
+            document.getElementById('input-user-email').value = '';
+            document.getElementById('input-user-name').focus();
+        });
+
+        // User identify form
+        document.getElementById('user-identify-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('input-user-identify').value.trim();
+            if (!email) {
+                showToast('Veuillez entrer votre email', 'warning');
+                return;
+            }
+            const user = users.find(u => u.email === email);
+            if (!user) {
+                showToast('Utilisateur non trouvé. Contactez l\'administrateur.', 'error');
+                return;
+            }
+            if (user.otpUsed) {
+                showToast('Cet OTP a déjà été utilisé. Demandez un nouveau code à l\'admin.', 'warning');
+                // Regenerate OTP anyway?
+                user.otp = generateOTP();
+                user.otpUsed = false;
+                saveUsers();
+                mountAdminDashboard();
+                currentUserOtp = user.otp;
+                currentUserEmail = email;
+                document.getElementById('user-current-otp').textContent = user.otp;
+                document.getElementById('user-step-1').classList.add('hidden');
+                document.getElementById('user-step-2').classList.remove('hidden');
+                document.getElementById('user-step-2').classList.add('fade-in');
+                // Clear otp inputs
+                document.querySelectorAll('.otp-digit').forEach(el => el.value = '');
+                document.querySelector('.otp-digit[data-index="0"]').focus();
+                showToast('Nouveau OTP généré', 'warning');
+                return;
+            }
+            currentUserEmail = email;
+            currentUserOtp = user.otp;
+            document.getElementById('user-current-otp').textContent = user.otp;
+            document.getElementById('user-step-1').classList.add('hidden');
+            document.getElementById('user-step-2').classList.remove('hidden');
+            document.getElementById('user-step-2').classList.add('fade-in');
+            // Clear otp inputs
+            document.querySelectorAll('.otp-digit').forEach(el => el.value = '');
+            document.querySelector('.otp-digit[data-index="0"]').focus();
+            showToast(`OTP envoyé à ${email}`, 'success');
+        });
+
+        // Copy OTP in user view
+        document.getElementById('btn-copy-otp').addEventListener('click', function() {
+            const otp = document.getElementById('user-current-otp').textContent;
+            if (otp && otp !== '------') {
+                navigator.clipboard.writeText(otp).then(() => {
+                    showToast('OTP copié', 'success');
+                }).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = otp;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    showToast('OTP copié', 'success');
+                });
+            }
+        });
+
+        // Resend OTP
+        document.getElementById('btn-resend-otp').addEventListener('click', function() {
+            if (!currentUserEmail) return;
+            const user = users.find(u => u.email === currentUserEmail);
+            if (!user) return;
+            const newOtp = generateOTP();
+            user.otp = newOtp;
+            user.otpUsed = false;
+            saveUsers();
+            mountAdminDashboard();
+            currentUserOtp = newOtp;
+            document.getElementById('user-current-otp').textContent = newOtp;
+            document.querySelectorAll('.otp-digit').forEach(el => el.value = '');
+            document.querySelector('.otp-digit[data-index="0"]').focus();
+            showToast('Nouveau OTP généré et envoyé', 'success');
+        });
+
+        // User OTP verification
+        document.getElementById('user-otp-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const digits = [];
+            document.querySelectorAll('.otp-digit').forEach(el => digits.push(el.value));
+            const enteredOtp = digits.join('');
+            if (enteredOtp.length !== 6) {
+                showToast('Veuillez entrer les 6 chiffres de l\'OTP', 'warning');
+                return;
+            }
+            if (enteredOtp === currentUserOtp) {
+                const user = users.find(u => u.email === currentUserEmail);
+                if (user) {
+                    user.otpUsed = true;
+                    saveUsers();
+                    mountAdminDashboard();
+                }
+                document.getElementById('user-step-2').classList.add('hidden');
+                document.getElementById('user-step-3').classList.remove('hidden');
+                document.getElementById('user-step-3').classList.add('fade-in');
+                mountServerGrid();
+                document.getElementById('user-portal-status').innerHTML = '<span class="text-emerald-400 text-xs"><i class="fas fa-check-circle mr-1"></i> Connecté</span>';
+                showToast('✅ Authentification réussie ! Accès aux serveurs autorisé.', 'success');
+            } else {
+                showToast('❌ OTP incorrect. Veuillez réessayer.', 'error');
+                document.querySelectorAll('.otp-digit').forEach(el => el.value = '');
+                document.querySelector('.otp-digit[data-index="0"]').focus();
+            }
+        });
+
+        // User disconnect
+        document.getElementById('btn-user-disconnect').addEventListener('click', function() {
+            resetUserFlow();
+            showToast('Déconnexion réussie', 'success');
+            document.getElementById('user-portal-status').innerHTML = 'Authentification requise';
+        });
+
+        function resetUserFlow() {
+            currentUserEmail = null;
+            currentUserOtp = null;
+            document.getElementById('user-step-1').classList.remove('hidden');
+            document.getElementById('user-step-2').classList.add('hidden');
+            document.getElementById('user-step-3').classList.add('hidden');
+            document.getElementById('input-user-identify').value = '';
+            document.querySelectorAll('.otp-digit').forEach(el => el.value = '');
+            document.getElementById('user-current-otp').textContent = '------';
+            document.getElementById('user-portal-status').innerHTML = 'Authentification requise';
+        }
+
+        // ===================================================================
+        // MODAL ACTION BUTTON
+        // ===================================================================
+        document.getElementById('modal-action-btn').addEventListener('click', function() {
+            showToast('🖥️ Connexion au serveur établie avec succès', 'success');
+            document.getElementById('server-modal').classList.add('hidden');
+        });
+
+        // ===================================================================
+        // INIT
+        // ===================================================================
+        // If users exist in localStorage, ensure dashboard is ready
+        // Default: show landing
+        showView('landing');
+        mountAdminDashboard();
+
+        // Also init server grid if already mounted
+        mountServerGrid();
+
+        // Keyboard shortcut for Enter on OTP digits to submit
+        document.querySelectorAll('.otp-digit').forEach(el => {
+            el.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('user-otp-form').dispatchEvent(new Event('submit'));
+                }
+            });
+        });
+
+        console.log('🔐 Simulation 2FA OTP chargée avec succès !');
+        console.log('📊 Utilisateurs enregistrés:', users.length);
+    </script>
+</body>
+</html>
